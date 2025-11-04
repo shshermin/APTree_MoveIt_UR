@@ -1,0 +1,12 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: hello_moveit
+    relative_path: urdf/ur.urdf.xacro
+    xacro_args: "end_effector_type:=gripper"
+  SRDF:
+    relative_path: config/srdf/ur.srdf.xacro
+    xacro_args: "end_effector_type:=gripper"
+  CONFIG:
+    author_name: shermin
+    author_email: shermin@example.com
+    generated_timestamp: 1730678400

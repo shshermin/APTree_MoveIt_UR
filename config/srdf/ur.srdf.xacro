@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="$(arg name)">
+   <xacro:arg name="name" default="ur"/>
+   <xacro:arg name="end_effector_type" default="none"/>
+  
+  <!-- Include all end-effector SRDF macros -->
+  <xacro:include filename="$(find hello_moveit)/config/srdf/ur_simple_gripper_macro.srdf.xacro"/>
+  <xacro:include filename="$(find hello_moveit)/config/srdf/ur_nailgun_macro.srdf.xacro"/>
+  
+  <!-- Always include base robot SRDF -->
+  <xacro:include filename="$(find hello_moveit)/config/srdf/ur_macro.srdf.xacro"/>
+  <xacro:ur_srdf />
+  
+  <!-- Conditionally include end-effector SRDF -->
+  <xacro:if value="${'$(arg end_effector_type)' == 'gripper'}">
+    <xacro:ur_simple_gripper_srdf />
+  </xacro:if>
+  <xacro:if value="${'$(arg end_effector_type)' == 'nailgun'}">
+    <xacro:ur_nailgun_srdf />
+  </xacro:if>
+</robot>

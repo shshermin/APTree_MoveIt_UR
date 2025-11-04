@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Macro for the simple gripper attached to the UR flange -->
+  <xacro:macro name="ur_simple_gripper" params="parent_link:=flange mesh_scale:='1 1 1'">
+    <!-- Grippesr base link -->
+    <link name="gripper_base">
+  <visual>
+    <geometry>
+      <mesh filename="file:///home/shermin/ws_moveit/src/hello_moveit/meshes/visual/gripperfixedbase.dae" scale="${mesh_scale}"/>
+    </geometry>
+    <material name="red"/>
+  </visual>
+  <collision>
+    <geometry>
+      <mesh filename="file:///home/shermin/ws_moveit/src/hello_moveit/meshes/collision/gripperfixedbase.stl" scale="${mesh_scale}"/>
+    </geometry>
+  </collision>
+  <inertial>
+    <mass value="0.425"/>
+    <origin xyz="0.17925 -0.34281 -0.07809" rpy="0 0 0"/>
+    <inertia ixx="0.443" ixy="0.0" ixz="0.0" iyy="0.428" iyz="0.0" izz="0.281"/>
+  </inertial>
+</link>
+    <!-- Fixed joint to attach gripper base to flange -->
+    <joint name="gripper_base_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="gripper_base"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+    <!-- Left finger -->
+    <link name="gripper_left_finger">
+      <visual>
+    <geometry>
+      <mesh filename="file:///home/shermin/ws_moveit/src/hello_moveit/meshes/visual/leftarmgripper.dae" scale="${mesh_scale}"/>
+    </geometry>
+    <material name="red"/>
+  </visual>
+  <collision>
+    <geometry>
+      <mesh filename="file:///home/shermin/ws_moveit/src/hello_moveit/meshes/collision/leftarmgripper.stl" scale="${mesh_scale}"/>
+    </geometry>
+  </collision>
+  <inertial>
+  <mass value="0.015"/> 
+  <origin xyz="0.17913 -0.34967 -0.14886" rpy="0 0 0"/>
+  <inertia ixx="0.00131" ixy="0.0" ixz="0.0" iyy="0.00122" iyz="0.0" izz="0.00058"/>
+</inertial>
+    </link>
+     <!-- left finger joints -->
+    <joint name="gripper_left_finger_joint" type="prismatic">
+      <parent link="gripper_base"/>
+      <child link="gripper_left_finger"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="0.0" upper="0.003" effort="10" velocity="0.1"/>
+    </joint>
+    <!-- Right finger -->
+    <!-- Right finger link -->
+    <link name="gripper_right_finger">
+      <visual>
+    <geometry>
+      <mesh filename="file:///home/shermin/ws_moveit/src/hello_moveit/meshes/visual/rightarmgripper.dae" scale="${mesh_scale}"/>
+    </geometry>
+    <material name="red"/>
+  </visual>
+  <collision>
+    <geometry>
+      <mesh filename="file:///home/shermin/ws_moveit/src/hello_moveit/meshes/collision/rightarmgripper.stl" scale="${mesh_scale}"/>
+    </geometry>
+  </collision>
+  <inertial>
+  <mass value="0.0397"/>
+  <origin xyz="0.17928 -0.31604 -0.15581" rpy="0 0 0"/>
+  <inertia ixx="0.0084" ixy="0.0" ixz="0.0" iyy="0.0559" iyz="0.0" izz="0.0494"/>
+</inertial>
+    </link>
+    <!-- Right finger joint -->
+    <joint name="gripper_right_finger_joint" type="prismatic">
+      <parent link="gripper_base"/>
+      <child link="gripper_right_finger"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="0 0 -1"/>
+      <limit lower="0.0" upper="0.003" effort="10" velocity="0.1"/>
+    </joint>
+  </xacro:macro>
+</robot>

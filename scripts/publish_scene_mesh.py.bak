@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""
+Publishes a mesh collision object (STL/DAE) to the MoveIt planning scene
+using the ApplyPlanningScene service.
+"""
+import os
+import sys
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import PoseStamped, Pose
+from shape_msgs.msg import SolidPrimitive, Mesh, MeshTriangle
+from moveit_msgs.msg import CollisionObject, PlanningScene, PlanningSceneComponents
+from moveit_msgs.srv import ApplyPlanningScene
+from ament_index_python.packages import get_package_share_directory
+
+
+class MeshScenePublisher(Node):
+    def __init__(self):
+        super().__init__('mesh_scene_publisher')
+        # ... (Parameter declarations and resolution are omitted for brevity, 
+        # but they are correct in your original code) ...
+        
+        self.get_logger().info('Initializing MeshScenePublisher...')
+
+        # --- Resolve Parameters and Path (as in your original code) ---
+        mesh_path = self.resolve_mesh_path()
+        frame_id = self.get_parameter('frame_id').get_parameter_value().string_value
+        scale = (
+            float(self.get_parameter('scale_x').get_parameter_value().double_value),
+            float(self.get_parameter('scale_y').get_parameter_value().double_value),
+            float(self.get_parameter('scale_z').get_parameter_value().double_value),
+        )
+        pos = (
+            float(self.get_parameter('pos_x').get_parameter_value().double_value),
+            float(self.get_parameter('pos_y').get_parameter_value().double_value),
+            float(self.get_parameter('pos_z').get_parameter_value().double_value),
+        )
+        quat = (
+            float(self.get_parameter('quat_x').get_parameter_value().double_value),
+            float(self.get_parameter('quat_y').get_parameter_value().double_value),
+            float(self.get_parameter('quat_z').get_parameter_value().double_value),
+            float(self.get_parameter('quat_w').get_parameter_value().double_value),
+        )
+        
+        # Initialize PlanningSceneInterface with this node (synchronous is good)
+        self.scene = PlanningSceneInterface(node=self, synchronous=True)
+
+        pose = PoseStamped()
+        pose.header.frame_id = frame_id
+        pose.pose.position.x = pos[0]
+        pose.pose.position.y = pos[1]
+        pose.pose.position.z = pos[2]
+        pose.pose.orientation.x = quat[0]
+        pose.pose.orientation.y = quat[1]
+        pose.pose.orientation.z = quat[2]
+        pose.pose.orientation.w = quat[3]
+
+        object_id = 'robot_table_mesh'
+        self.get_logger().info(f'Attempting to add mesh {mesh_path} as {object_id}...')
+        
+        # Remove existing object (your try/except block is good)
+        try:
+            self.scene.remove_world_object(object_id)
+            time.sleep(0.5) # Wait for removal to propagate before adding
+        except Exception:
+            pass
+            
+        # Add mesh (synchronous=True handles the wait for application)
+        self.scene.add_mesh(object_id, pose, mesh_path, size=scale)
+        self.get_logger().info(f'Mesh addition requested synchronously.')
+
+        # Wait a bit longer to ensure RViz and MoveIt fully update
+        time.sleep(2.0)
+        
+        names = self.scene.get_known_object_names()
+        if object_id in names:
+            self.get_logger().info(f'Mesh object successfully confirmed in scene: {object_id}')
+        else:
+            self.get_logger().error(f'Mesh object NOT confirmed in scene. Known: {names}')
+
+    def resolve_mesh_path(self):
+        # Your path resolution logic is excellent; extracting it just for clarity
+        # ... (full path resolution code here) ...
+        mesh_path = self.get_parameter('mesh_path').get_parameter_value().string_value
+        if not mesh_path:
+             try:
+                 pkg_share = get_package_share_directory('hello_moveit')
+                 mesh_path = os.path.join(pkg_share, 'meshes', 'collision', 'robottable.stl')
+             except Exception as e:
+                 self.get_logger().error(f"Failed to find 'hello_moveit' package for default mesh path: {e}")
+                 raise
+                 
+        if mesh_path.startswith('package://'):
+            pkg, rel = mesh_path[len('package://'):].split('/', 1)
+            pkg_share = get_package_share_directory(pkg)
+            mesh_path = os.path.join(pkg_share, rel)
+
+        if not os.path.exists(mesh_path):
+            self.get_logger().error(f'Mesh path does not exist: {mesh_path}')
+            raise FileNotFoundError(mesh_path)
+        return mesh_path
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    
+    try:
+        node = MeshScenePublisher()
+    except FileNotFoundError:
+        # If the file wasn't found, exit cleanly
+        rclpy.shutdown()
+        return
+
+    # No need to spin, the logic is in the constructor and the synchronous call blocks
+    # We just need to give the logger time to flush before destroy/shutdown
+    rclpy.spin_once(node, timeout_sec=0.1) 
+    
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

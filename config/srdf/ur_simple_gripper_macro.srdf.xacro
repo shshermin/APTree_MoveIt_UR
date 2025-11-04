@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+  <xacro:macro name="ur_simple_gripper_srdf" params="">
+    <!-- Gripper group -->
+    <group name="gripper">
+      <joint name="gripper_left_finger_joint" />
+      <joint name="gripper_right_finger_joint" />
+    </group>
+    
+    <!-- End effector definition -->
+    <end_effector name="gripper" parent_link="tool0" group="gripper" parent_group="ur_manipulator" />
+    
+    <!-- Gripper named states -->
+    <group_state name="open" group="gripper">
+      <joint name="gripper_left_finger_joint" value="0.003" />
+      <joint name="gripper_right_finger_joint" value="0.003" />
+    </group_state>
+    <group_state name="closed" group="gripper">
+      <joint name="gripper_left_finger_joint" value="0.0" />
+      <joint name="gripper_right_finger_joint" value="0.0" />
+    </group_state>
+    
+    <!-- Disable collisions for gripper -->
+    <disable_collisions link1="gripper_base" link2="gripper_left_finger" reason="Adjacent" />
+    <disable_collisions link1="gripper_base" link2="gripper_right_finger" reason="Adjacent" />
+    <disable_collisions link1="gripper_left_finger" link2="gripper_right_finger" reason="Never" />
+    <disable_collisions link1="gripper_base" link2="tool0" reason="Adjacent" />
+    <disable_collisions link1="gripper_base" link2="wrist_3_link" reason="Never" />
+  </xacro:macro>
+</robot>

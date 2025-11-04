@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="ur_nailgun" params="parent_link:=flange mesh_scale:='1 1 1'">
+    <!-- Nailgun base link -->
+    <link name="nailgun_base">
+      <visual>
+        <geometry>
+          <mesh filename="file:///home/shermin/ws_moveit/src/hello_moveit/meshes/visual/nailgun.dae" scale="${mesh_scale}"/>
+        </geometry>
+        <material name="red"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="file:///home/shermin/ws_moveit/src/hello_moveit/meshes/collision/nailgun.stl" scale="${mesh_scale}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="7.3"/>
+        <origin xyz="0.152685 0.098458 -0.00549" rpy="0 0 0"/>
+        <inertia ixx="0.423" ixy="0.0" ixz="0.0" iyy="0.249" iyz="0.0" izz="0.623"/>
+      </inertial>
+    </link>
+    <!-- Fixed joint to attach nailgun base to flange -->
+    <joint name="nailgun_base_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="nailgun_base"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+</robot>

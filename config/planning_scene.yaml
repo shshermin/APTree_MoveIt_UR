@@ -1,0 +1,32 @@
+# Planning scene configuration - defines static objects in the environment
+# These objects will be considered during collision checking and motion planning
+
+planning_scene:
+  world:
+    collision_objects:
+      - id: robot_table
+        pose:
+          position:
+            x: 0.0
+            y: 0.0
+            z: -0.5  # Adjust based on your table height (negative = below base_link)
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.0
+            w: 1.0
+        # Collision mesh - used for motion planning (simpler, faster)
+        meshes:
+          - filename: package://hello_moveit/meshes/collision/robottable.stl
+        mesh_poses:
+          - position:
+              x: 0.0
+              y: 0.0
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.0
+              w: 1.0
+        # Note: RViz will display the collision mesh
+        # For better visuals, you could use .dae instead, but .stl is faster for collision checking

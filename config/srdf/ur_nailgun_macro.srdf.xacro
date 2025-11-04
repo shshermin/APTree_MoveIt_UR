@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+  <xacro:macro name="ur_nailgun_srdf" params="">
+    <!-- Nailgun group (no movable joints, just a fixed tool) -->
+    <group name="nailgun">
+      <link name="nailgun_base" />
+    </group>
+    
+    <!-- End effector definition -->
+    <end_effector name="nailgun" parent_link="tool0" group="nailgun" parent_group="ur_manipulator" />
+    
+    <!-- Disable collisions for nailgun -->
+    <disable_collisions link1="nailgun_base" link2="tool0" reason="Adjacent" />
+    <disable_collisions link1="nailgun_base" link2="wrist_3_link" reason="Never" />
+    <disable_collisions link1="nailgun_base" link2="wrist_2_link" reason="Never" />
+  </xacro:macro>
+</robot>
