@@ -105,6 +105,11 @@ install(DIRECTORY config/
 install(PROGRAMS
   scripts/publish_scene.py
   scripts/publish_scene_mesh.py
+  scripts/dynamic_scene_example.py
+  scripts/move_to_task.py
+  scripts/pick_task.py
+  scripts/test_move_and_pick.py
+  scripts/mtc_pick_task.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -131,20 +131,15 @@ def main():
     
     scene = DynamicSceneManager()
     
-    # Example: Add table
-    scene.add_mesh_object(
-        object_id='robot_table',
-        mesh_path='/home/shermin/ws_moveit/src/hello_moveit/meshes/collision/robottable.stl',
-        pos=(0.5, 0.0, 0.0),
-        scale=(1.0, 1.0, 1.0)
-    )
+    # Note: Table is published by the launch file (mesh_scene_publisher_node)
+    # This script is for dynamic objects only
     
     # Example: Add first object on table
     scene.add_mesh_object(
         object_id='object_1',
-        mesh_path='/path/to/object.stl',  # Replace with your object path
-        pos=(0.6, 0.0, 0.1),
-        scale=(0.01, 0.01, 0.01)
+        mesh_path='/home/shermin/ws_moveit/src/hello_moveit/meshes/collision/object.stl',
+        pos=(0.0, 0.0, 0.0),  # On the table surface
+        scale=(1.0, 1.0, 1.0)
     )
     
     scene.get_logger().info('Scene setup complete. Press Ctrl+C to exit.')

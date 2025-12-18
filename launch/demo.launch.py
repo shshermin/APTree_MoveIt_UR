@@ -1,7 +1,7 @@
-# Standalone demo launch file for MoveIt with RViz
-# No real robot or Gazebo needed - uses fake controllers for visualization
+# MoveIt launch file for real UR robot
 
 import os
+import yaml
 from pathlib import Path
 
 from launch import LaunchDescription
@@ -17,12 +17,26 @@ from moveit_configs_utils import MoveItConfigsBuilder
 from ament_index_python.packages import get_package_share_directory
 
 
+def load_yaml(package_name, file_path):
+    package_path = get_package_share_directory(package_name)
+    absolute_file_path = os.path.join(package_path, file_path)
+
+    try:
+        with open(absolute_file_path) as file:
+            return yaml.safe_load(file)
+    except OSError:
+        return None
+
+
 def generate_launch_description():
     # Launch arguments
     ur_type = LaunchConfiguration("ur_type")
+    robot_ip = LaunchConfiguration("robot_ip")
     end_effector_type = LaunchConfiguration("end_effector_type")
     launch_rviz = LaunchConfiguration("launch_rviz")
     use_sim_time = LaunchConfiguration("use_sim_time")
+    warehouse_sqlite_path = LaunchConfiguration("warehouse_sqlite_path")
+    use_mock_hardware = LaunchConfiguration("use_mock_hardware")
 
     # Build MoveIt configuration
     moveit_config = (
@@ -49,7 +63,14 @@ def generate_launch_description():
         .to_moveit_configs()
     )
 
-    # Robot State Publisher - publishes robot description and TF
+    warehouse_ros_config = {
+        "warehouse_plugin": "warehouse_ros_sqlite::DatabaseConnection",
+        "warehouse_host": warehouse_sqlite_path,
+    }
+
+    # Note: UR robot driver should be launched separately in another terminal
+
+    # Robot State Publisher - will get robot description from ur_robot_driver
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
@@ -60,8 +81,6 @@ def generate_launch_description():
             {"use_sim_time": use_sim_time},
         ],
     )
-
-    # RViz
     rviz_config_file = PathJoinSubstitution(
         [FindPackageShare("hello_moveit"), "config", "moveit.rviz"]
     )
@@ -78,6 +97,7 @@ def generate_launch_description():
             moveit_config.robot_description_kinematics,
             moveit_config.planning_pipelines,
             moveit_config.joint_limits,
+            warehouse_ros_config,
             {"use_sim_time": use_sim_time},
         ],
     )
@@ -92,18 +112,6 @@ def generate_launch_description():
         parameters=[{"use_sim_time": use_sim_time}],
     )
 
-    # Joint State Publisher GUI - allows manual joint control
-    # Note: It will start at zeros, but you can use the GUI sliders to move joints
-    joint_state_publisher_gui = Node(
-        package="joint_state_publisher_gui",
-        executable="joint_state_publisher_gui",
-        name="joint_state_publisher_gui",
-        output="screen",
-        parameters=[
-            {"use_sim_time": use_sim_time},
-        ],
-    )
-
     # Move Group Node
     move_group_node = Node(
         package="moveit_ros_move_group",
@@ -111,6 +119,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             moveit_config.to_dict(),
+            warehouse_ros_config,
             {
                 "use_sim_time": use_sim_time,
                 "publish_robot_description_semantic": True,
@@ -118,17 +127,7 @@ def generate_launch_description():
         ],
     )
 
-    # Scene Publisher (Box primitive) - fallback/example
-    scene_publisher_node = Node(
-        package="hello_moveit",
-        executable="publish_scene.py",
-        name="scene_publisher",
-        output="screen",
-        parameters=[{"use_sim_time": use_sim_time}],
-    )
-
     # Mesh Scene Publisher - uses STL/DAE collision mesh
-    # Replace the path below with your actual mesh file path
     mesh_scene_publisher_node = Node(
         package="hello_moveit",
         executable="publish_scene_mesh.py",
@@ -143,27 +142,12 @@ def generate_launch_description():
         ],
     )
 
-    # Planning Scene Publisher - loads static scene objects (table, etc.)
-    planning_scene_file = PathJoinSubstitution(
-        [FindPackageShare("hello_moveit"), "config", "planning_scene.yaml"]
-    )
-    
-    # Node to publish planning scene from file
-    planning_scene_publisher = Node(
-        package="moveit_ros_planning",
-        executable="moveit_publish_scene_from_text",
-        name="planning_scene_publisher",
-        output="screen",
-        arguments=[planning_scene_file],
-        parameters=[{"use_sim_time": use_sim_time}],
-    )
-
     return LaunchDescription(
         [
             # Declare arguments
             DeclareLaunchArgument(
                 "ur_type",
-                default_value="ur10e",
+                default_value="ur10",
                 description="Type/series of used UR robot.",
                 choices=[
                     "ur3",
@@ -177,9 +161,15 @@ def generate_launch_description():
                     "ur16e",
                     "ur8long",
                     "ur15",
+                    "ur18",
                     "ur20",
                     "ur30",
                 ],
+            ),
+            DeclareLaunchArgument(
+                "robot_ip",
+                description="IP address of the UR robot.",
+                default_value="192.168.1.100",
             ),
             DeclareLaunchArgument(
                 "end_effector_type",
@@ -197,10 +187,14 @@ def generate_launch_description():
                 default_value="false",
                 description="Use simulation time",
             ),
+            DeclareLaunchArgument(
+                "warehouse_sqlite_path",
+                default_value=os.path.expanduser("~/.ros/warehouse_ros.sqlite"),
+                description="Path where the warehouse database should be stored",
+            ),
             # Launch nodes
             robot_state_publisher,
             static_tf_node,
-            joint_state_publisher_gui,
             move_group_node,
             mesh_scene_publisher_node,
             rviz_node,
