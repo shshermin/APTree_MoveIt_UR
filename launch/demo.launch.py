@@ -127,6 +127,16 @@ def generate_launch_description():
         ],
     )
 
+    # Publish gripper joint states (UR driver only publishes the 6 arm joints)
+    # This publishes default values for gripper joints so MoveIt knows their state
+    gripper_joint_state_publisher = Node(
+        package="hello_moveit",
+        executable="publish_gripper_joint_states.py",
+        name="gripper_joint_state_publisher",
+        output="screen",
+        parameters=[{"use_sim_time": use_sim_time}],
+    )
+
     # Mesh Scene Publisher - uses STL/DAE collision mesh
     mesh_scene_publisher_node = Node(
         package="hello_moveit",
@@ -196,6 +206,7 @@ def generate_launch_description():
             robot_state_publisher,
             static_tf_node,
             move_group_node,
+            gripper_joint_state_publisher,
             mesh_scene_publisher_node,
             rviz_node,
         ]

@@ -105,6 +105,7 @@ install(DIRECTORY config/
 install(PROGRAMS
   scripts/publish_scene.py
   scripts/publish_scene_mesh.py
+  scripts/publish_gripper_joint_states.py
   scripts/dynamic_scene_example.py
   scripts/move_to_task.py
   scripts/pick_task.py

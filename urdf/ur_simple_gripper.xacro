@@ -82,5 +82,13 @@
       <axis xyz="0 0 -1"/>
       <limit lower="0.0" upper="0.003" effort="10" velocity="0.1"/>
     </joint>
+
+    <!-- Gripper tip link (grasp point between fingertips) -->
+    <link name="gripper_tip"/>
+    <joint name="gripper_tip_joint" type="fixed">
+      <parent link="gripper_base"/>
+      <child link="gripper_tip"/>
+      <origin xyz="0.1325 0.0 -0.00735" rpy="0 0 0"/>
+    </joint>
   </xacro:macro>
 </robot>

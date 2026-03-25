@@ -16,12 +16,21 @@ from moveit_msgs.msg import (
 from geometry_msgs.msg import Pose, PoseStamped
 from shape_msgs.msg import SolidPrimitive
 import time
+import argparse
+
+
+# Map end-effector types to their tip link names
+EE_LINK_MAP = {
+    'none': 'tool0',
+    'gripper': 'gripper_tip',
+    'nailgun': 'nailgun_tip',
+}
 
 
 class MoveToTask(Node):
     """Simple task to move robot to a Cartesian pose."""
     
-    def __init__(self):
+    def __init__(self, end_effector_type='none'):
         super().__init__('move_to_task')
         
         # Action client for MoveGroup
@@ -29,8 +38,9 @@ class MoveToTask(Node):
         
         # Configuration
         self.planning_group = 'ur_manipulator'
-        self.end_effector_link = 'tool0'
+        self.end_effector_link = EE_LINK_MAP.get(end_effector_type, 'tool0')
         self.reference_frame = 'base_link'
+        self.get_logger().info(f'End-effector link: {self.end_effector_link}')
         
         # Wait for action server
         self.get_logger().info('Waiting for move_group action server...')
@@ -71,6 +81,8 @@ class MoveToTask(Node):
         goal.request.max_velocity_scaling_factor = velocity_scaling
         goal.request.max_acceleration_scaling_factor = acceleration_scaling
         goal.request.workspace_parameters.header.frame_id = self.reference_frame
+        goal.request.pipeline_id = 'ompl'
+        goal.request.planner_id = 'RRTstar'
         
         # Set target pose as goal constraint
         constraints = Constraints()
@@ -116,7 +128,7 @@ class MoveToTask(Node):
         goal.request.goal_constraints.append(constraints)
         
         # Planning options
-        goal.planning_options.plan_only = True  # Plan AND execute on real robot
+        goal.planning_options.plan_only = True  # Plan only, don't execute
         goal.planning_options.planning_scene_diff.is_diff = True
         goal.planning_options.planning_scene_diff.robot_state.is_diff = True
         
@@ -168,6 +180,15 @@ class MoveToTask(Node):
 
 def main():
     """Example: Add object to scene and move to grasp position above it."""
+    parser = argparse.ArgumentParser(description='Move robot to a target pose')
+    parser.add_argument('--x', type=float, default=-0.5, help='Target X coordinate (default: -0.5)')
+    parser.add_argument('--y', type=float, default=-0.5, help='Target Y coordinate (default: -0.5)')
+    parser.add_argument('--z', type=float, default=0.4, help='Target Z coordinate (default: 0.4)')
+    parser.add_argument('--end_effector_type', type=str, default='none',
+                        choices=['none', 'gripper', 'nailgun'],
+                        help='End-effector type (default: none = flange)')
+    args = parser.parse_args()
+
     rclpy.init()
     
     # Import scene manager
@@ -175,18 +196,21 @@ def main():
     
     # Create scene manager and motion planner
     scene = DynamicSceneManager()
-    move_to_task = MoveToTask()
+    move_to_task = MoveToTask(end_effector_type=args.end_effector_type)
     
-    # Step 1: Add object to scene
-    move_to_task.get_logger().info('Step 1: Adding object to scene')
+    # Step 1: Attach object to gripper so it moves with the robot
+    # Object mesh: X(-0.01 to 0.01), Y(-0.1874 to 0.1876), Z(-0.02 to 0.0)
+    # Position relative to gripper_base: X=0.1325 (at finger tips), Y=0.0, Z=-0.00735 (centered between fingers)
+    # Object origin is at its top (Z=0), so object body hangs below - bottom aligns with finger tips
+    move_to_task.get_logger().info('Step 1: Attaching object to gripper')
 
-    object_position = (-0.6, 0.199, 0.1)  # Position on table (5cm above base)
-
-    scene.add_mesh_object(
+    scene.attach_mesh_object(
         object_id='target_object',
         mesh_path='/home/shermin/ws_moveit/src/hello_moveit/meshes/collision/object.stl',
-        pos=object_position,  # Use same position
-        scale=(1.0, 1.0, 1.0)
+        link_name='gripper_base',
+        pos=(0.1225, 0.0, 0.0),
+        scale=(1.0, 1.0, 1.0),
+        touch_links=['gripper_base', 'gripper_left_finger', 'gripper_right_finger', 'tool0']
     )
     
     # Wait for object to be added
@@ -198,12 +222,11 @@ def main():
     target_pose = Pose()
     
     # Position: 15cm above the object
-    target_pose.position.x = object_position[0]
-    target_pose.position.y = object_position[1]
-    target_pose.position.z = object_position[2] 
+    target_pose.position.x = args.x
+    target_pose.position.y = args.y
+    target_pose.position.z = args.z 
 
-    # Orientation: tool0 Z-axis pointing down, with more rotational freedom
-    # 180-degree rotation around Y-axis (allows wrist to rotate freely)
+    # Orientation: straight down (180° around Y) - object flat on XY plane
     target_pose.orientation.x = 0.0
     target_pose.orientation.y = 1.0
     target_pose.orientation.z = 0.0

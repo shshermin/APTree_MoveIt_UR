@@ -7,7 +7,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Pose, Point
 from shape_msgs.msg import Mesh, MeshTriangle
-from moveit_msgs.msg import CollisionObject
+from moveit_msgs.msg import CollisionObject, AttachedCollisionObject
 import struct
 import time
 
@@ -20,6 +20,7 @@ class DynamicSceneManager(Node):
         
         # Publisher for collision objects
         self.collision_pub = self.create_publisher(CollisionObject, '/collision_object', 10)
+        self.attached_pub = self.create_publisher(AttachedCollisionObject, '/attached_collision_object', 10)
         
         # Wait for move_group to be ready
         time.sleep(1.0)
@@ -103,6 +104,55 @@ class DynamicSceneManager(Node):
         self.collision_pub.publish(collision_obj)
         self.get_logger().info(f'Added object: {object_id}')
         time.sleep(0.5)  # Wait for move_group to process
+    
+    def attach_mesh_object(self, object_id, mesh_path, link_name='tool0',
+                           pos=(0.0, 0.0, 0.0), quat=(0.0, 0.0, 0.0, 1.0),
+                           scale=(1.0, 1.0, 1.0), touch_links=None):
+        """
+        Attach a mesh collision object to a robot link so it moves with the robot.
+        
+        Args:
+            object_id: Unique name for the object
+            mesh_path: Absolute path to STL file
+            link_name: Robot link to attach to
+            pos: Position relative to the link
+            quat: Orientation quaternion (x, y, z, w) relative to the link
+            scale: Scale factors (x, y, z)
+            touch_links: Links allowed to touch the object (no collision checked)
+        """
+        mesh = self.load_stl_mesh(mesh_path)
+        for vertex in mesh.vertices:
+            vertex.x *= scale[0]
+            vertex.y *= scale[1]
+            vertex.z *= scale[2]
+        
+        collision_obj = CollisionObject()
+        collision_obj.header.frame_id = link_name
+        collision_obj.header.stamp = self.get_clock().now().to_msg()
+        collision_obj.id = object_id
+        collision_obj.operation = CollisionObject.ADD
+        
+        pose = Pose()
+        pose.position.x = pos[0]
+        pose.position.y = pos[1]
+        pose.position.z = pos[2]
+        pose.orientation.x = quat[0]
+        pose.orientation.y = quat[1]
+        pose.orientation.z = quat[2]
+        pose.orientation.w = quat[3]
+        
+        collision_obj.meshes.append(mesh)
+        collision_obj.mesh_poses.append(pose)
+        
+        attached_obj = AttachedCollisionObject()
+        attached_obj.link_name = link_name
+        attached_obj.object = collision_obj
+        if touch_links:
+            attached_obj.touch_links = touch_links
+        
+        self.attached_pub.publish(attached_obj)
+        self.get_logger().info(f'Attached object: {object_id} to {link_name}')
+        time.sleep(0.5)
     
     def remove_object(self, object_id):
         """Remove an object from the planning scene."""
