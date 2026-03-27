@@ -383,6 +383,10 @@ def main():
     
     if success:
         move_to_task.get_logger().info('Successfully reached grasp position!')
+        # Detach object from gripper, leaving it in the scene at its current pose
+        if not args.no_object:
+            scene.detach_object('target_object', link_name='gripper_base')
+            move_to_task.get_logger().info('Object detached and left in scene')
     else:
         move_to_task.get_logger().error('Failed to reach grasp position')
     

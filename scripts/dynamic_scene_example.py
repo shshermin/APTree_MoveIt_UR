@@ -154,6 +154,20 @@ class DynamicSceneManager(Node):
         self.get_logger().info(f'Attached object: {object_id} to {link_name}')
         time.sleep(0.5)
     
+    def detach_object(self, object_id, link_name='tool0'):
+        """
+        Detach an object from the robot and leave it in the scene as a
+        static collision object at its current world position.
+        """
+        attached_obj = AttachedCollisionObject()
+        attached_obj.link_name = link_name
+        attached_obj.object.id = object_id
+        attached_obj.object.operation = CollisionObject.REMOVE
+        
+        self.attached_pub.publish(attached_obj)
+        self.get_logger().info(f'Detached object: {object_id} from {link_name}')
+        time.sleep(0.5)
+    
     def remove_object(self, object_id):
         """Remove an object from the planning scene."""
         collision_obj = CollisionObject()
