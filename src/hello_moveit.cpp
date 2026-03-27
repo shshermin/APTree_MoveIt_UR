@@ -49,13 +49,13 @@ auto move_group_interface = MoveGroupInterface(node, "ur_manipulator");
               current_pose.pose.position.y, 
               current_pose.pose.position.z);
 
-  // USER'S REQUEST: Move to target pose with X=-0.36, Y=-0.55, Z = ABOVE table surface
-  RCLCPP_INFO(logger, "Planning to target pose: X=-0.36, Y=-0.55, Z=0.90m (above table)");
+  // USER'S REQUEST: Move to target pose (ROS base_link frame)
+  RCLCPP_INFO(logger, "Planning to target pose: X=-0.476, Y=0.1168, Z=-0.100");
   
   geometry_msgs::msg::Pose target_pose;
-  target_pose.position.x = -0.36;  // Your specified X
-  target_pose.position.y = -0.55;  // Your specified Y  
-  target_pose.position.z = 0.90;   // 90cm absolute height (safe above table at 75cm)
+  target_pose.position.x = -0.476;
+  target_pose.position.y = 0.1168;
+  target_pose.position.z = -0.100;
   
   // Keep current orientation (or use simple orientation)
   target_pose.orientation = current_pose.pose.orientation;
@@ -65,7 +65,7 @@ auto move_group_interface = MoveGroupInterface(node, "ur_manipulator");
   // target_pose.orientation.z = 0.0;
   // target_pose.orientation.w = 1.0;
   
-  RCLCPP_INFO(logger, "Target pose: [%.3f, %.3f, %.3f] (safe above table)", 
+  RCLCPP_INFO(logger, "Target pose: [%.3f, %.3f, %.3f]", 
               target_pose.position.x, target_pose.position.y, target_pose.position.z);
   
   // Use Cartesian pose planning
@@ -122,7 +122,7 @@ auto move_group_interface = MoveGroupInterface(node, "ur_manipulator");
   if (success)
   {
     RCLCPP_INFO(logger, "Cartesian pose planning was successful!");
-    RCLCPP_INFO(logger, "Robot will move to target: X=-0.36, Y=-0.55, Z=0.90 (above table)");
+    RCLCPP_INFO(logger, "Robot will move to target: X=-0.476, Y=0.1168, Z=-0.100");
     
     // SAVE THE TRAJECTORY PLAN to hello_moveit package
     // Create planned_trajectory directory if it doesn't exist
@@ -139,7 +139,7 @@ auto move_group_interface = MoveGroupInterface(node, "ur_manipulator");
     std::string trajectory_file_path = trajectory_dir + "/trajectory_" + timestamp.str() + ".yaml";
     std::ofstream trajectory_file(trajectory_file_path);
     trajectory_file << "# MoveIt Trajectory Plan - Generated: " << timestamp.str() << "\n";
-    trajectory_file << "# Target pose: X=-0.36, Y=-0.55, Z=0.90\n";
+    trajectory_file << "# Target pose: X=-0.476, Y=0.1168, Z=-0.100\n";
     trajectory_file << "joint_names: [";
     for (size_t i = 0; i < plan.trajectory.joint_trajectory.joint_names.size(); ++i) {
       trajectory_file << "'" << plan.trajectory.joint_trajectory.joint_names[i] << "'";

@@ -70,8 +70,9 @@ def generate_launch_description():
 
     # Note: UR robot driver should be launched separately in another terminal
 
-    # Robot State Publisher - will get robot description from ur_robot_driver
-    robot_state_publisher = Node(
+    # Robot State Publisher with the full URDF (including gripper/end-effector).
+    # The driver's RSP only has the base robot; this one adds gripper frames to TF.
+    robot_state_publisher_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
         name="robot_state_publisher",
@@ -81,6 +82,7 @@ def generate_launch_description():
             {"use_sim_time": use_sim_time},
         ],
     )
+
     rviz_config_file = PathJoinSubstitution(
         [FindPackageShare("hello_moveit"), "config", "moveit.rviz"]
     )
@@ -102,15 +104,8 @@ def generate_launch_description():
         ],
     )
 
-    # Static TF for world frame
-    static_tf_node = Node(
-        package="tf2_ros",
-        executable="static_transform_publisher",
-        name="static_transform_publisher",
-        output="log",
-        arguments=["0", "0", "0", "0", "0", "0", "world", "base_link"],
-        parameters=[{"use_sim_time": use_sim_time}],
-    )
+    # No static_transform_publisher needed — robot_state_publisher already
+    # publishes world → base_link from the URDF's base_joint (with π yaw).
 
     # Move Group Node
     move_group_node = Node(
@@ -147,7 +142,7 @@ def generate_launch_description():
             {"frame_id": "base_link"},
             {"mesh_path": "/home/shermin/ws_moveit/src/hello_moveit/meshes/collision/robottable.stl"},
             {"scale_x": 1.0}, {"scale_y": 1.0}, {"scale_z": 1.0},
-            {"pos_x": 0.0}, {"pos_y": 0.0}, {"pos_z": -0.001},
+            {"pos_x": 0.0}, {"pos_y": 0.0}, {"pos_z": -0.01},
             {"quat_x": 0.0}, {"quat_y": 0.0}, {"quat_z": 0.0}, {"quat_w": 1.0},
         ],
     )
@@ -157,7 +152,7 @@ def generate_launch_description():
             # Declare arguments
             DeclareLaunchArgument(
                 "ur_type",
-                default_value="ur10",
+                default_value="ur10e",
                 description="Type/series of used UR robot.",
                 choices=[
                     "ur3",
@@ -185,7 +180,7 @@ def generate_launch_description():
                 "end_effector_type",
                 default_value="none",
                 description="Type of end-effector attached to the robot.",
-                choices=["none", "gripper", "nailgun"],
+                choices=["none", "gripper", "nailgun", "both"],
             ),
             DeclareLaunchArgument(
                 "launch_rviz",
@@ -203,8 +198,7 @@ def generate_launch_description():
                 description="Path where the warehouse database should be stored",
             ),
             # Launch nodes
-            robot_state_publisher,
-            static_tf_node,
+            robot_state_publisher_node,
             move_group_node,
             gripper_joint_state_publisher,
             mesh_scene_publisher_node,

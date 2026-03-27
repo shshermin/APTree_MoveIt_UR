@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="ur_nailgun" params="parent_link:=flange mesh_scale:='1 1 1'">
+  <xacro:macro name="ur_nailgun" params="parent_link:=tool0 mesh_scale:='1 1 1'">
     <!-- Nailgun base link -->
     <link name="nailgun_base">
       <visual>
@@ -20,7 +20,7 @@
         <inertia ixx="0.423" ixy="0.0" ixz="0.0" iyy="0.249" iyz="0.0" izz="0.623"/>
       </inertial>
     </link>
-    <!-- Fixed joint to attach nailgun base to flange -->
+    <!-- Fixed joint to attach nailgun base to tool0 -->
     <joint name="nailgun_base_joint" type="fixed">
       <parent link="${parent_link}"/>
       <child link="nailgun_base"/>
@@ -32,7 +32,7 @@
     <joint name="nailgun_tip_joint" type="fixed">
       <parent link="nailgun_base"/>
       <child link="nailgun_tip"/>
-      <origin xyz="0.268 0.0 0.0" rpy="0 0 0"/>
+      <origin xyz="-0.095 0.0 0.3165" rpy="0 0 0"/>
     </joint>
   </xacro:macro>
 </robot>

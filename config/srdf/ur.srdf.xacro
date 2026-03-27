@@ -18,4 +18,12 @@
   <xacro:if value="${'$(arg end_effector_type)' == 'nailgun'}">
     <xacro:ur_nailgun_srdf />
   </xacro:if>
+  <xacro:if value="${'$(arg end_effector_type)' == 'both'}">
+    <xacro:ur_simple_gripper_srdf />
+    <xacro:ur_nailgun_srdf />
+    <!-- Cross-collisions between gripper and nailgun -->
+    <disable_collisions link1="gripper_base" link2="nailgun_base" reason="Never" />
+    <disable_collisions link1="gripper_left_finger" link2="nailgun_base" reason="Never" />
+    <disable_collisions link1="gripper_right_finger" link2="nailgun_base" reason="Never" />
+  </xacro:if>
 </robot>
