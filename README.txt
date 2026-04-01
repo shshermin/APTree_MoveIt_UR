@@ -1,4 +1,5 @@
 How to setup and run the robot.
+#terminal 4
 #connection to the C# code
 cd /home/shermin/ws_moveit
 source install/setup.bash
@@ -37,7 +38,7 @@ python3 src/hello_moveit/scripts/move_to_task.py --end_effector_type nailgun --b
 
 
 # building a package
-
+colcon build --symlink-install --packages-select hello_moveit && source install/setup.bash
 
 Setting up the port connection in pawershel for WSL2
 

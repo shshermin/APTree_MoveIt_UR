@@ -322,7 +322,7 @@ def main():
 
         scene.attach_mesh_object(
             object_id='target_object',
-            mesh_path='/home/shermin/ws_moveit/src/hello_moveit/meshes/collision/object.stl',
+            mesh_path='object',
             link_name='gripper_base',
             pos=(0.0, 0.0, 0.1225),
             scale=(1.0, 1.0, 1.0),

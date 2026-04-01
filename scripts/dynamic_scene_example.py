@@ -10,6 +10,11 @@ from shape_msgs.msg import Mesh, MeshTriangle
 from moveit_msgs.msg import CollisionObject, AttachedCollisionObject
 import struct
 import time
+import os
+
+
+# Default directory for object meshes (collision)
+MESH_DIR = '/home/shermin/ws_moveit/src/hello_moveit/meshes/collision/dynamic_objects'
 
 
 class DynamicSceneManager(Node):
@@ -59,22 +64,157 @@ class DynamicSceneManager(Node):
         
         return mesh
     
+    def load_obj_mesh(self, filepath, object_name=None):
+        """
+        Load Wavefront .obj file and return Mesh message.
+        
+        If object_name is given, only the geometry belonging to that named
+        object (defined by 'o <name>' lines in the OBJ) is returned.
+        If object_name is None, the entire file is loaded as one mesh.
+        """
+        all_vertices = []   # global vertex list (shared across all objects)
+        # Per-object face collection: object_name -> list of face index lists
+        objects = {}
+        current_obj = None
+        
+        with open(filepath, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if not parts:
+                    continue
+                if parts[0] == 'o' or parts[0] == 'g':
+                    current_obj = parts[1] if len(parts) > 1 else None
+                    if current_obj and current_obj not in objects:
+                        objects[current_obj] = []
+                elif parts[0] == 'v':
+                    point = Point()
+                    point.x = float(parts[1])
+                    point.y = float(parts[2])
+                    point.z = float(parts[3])
+                    all_vertices.append(point)
+                elif parts[0] == 'f':
+                    face_indices = []
+                    for p in parts[1:]:
+                        idx = int(p.split('/')[0]) - 1  # convert to 0-indexed
+                        face_indices.append(idx)
+                    if current_obj is not None:
+                        if current_obj not in objects:
+                            objects[current_obj] = []
+                        objects[current_obj].append(face_indices)
+                    else:
+                        # No object defined yet — store under None key
+                        if None not in objects:
+                            objects[None] = []
+                        objects[None].append(face_indices)
+        
+        # If a specific object is requested, extract only its faces
+        if object_name is not None:
+            if object_name not in objects:
+                available = [k for k in objects.keys() if k is not None]
+                raise KeyError(
+                    f"Object '{object_name}' not found in {filepath}. "
+                    f"Available objects: {available}"
+                )
+            face_lists = objects[object_name]
+        else:
+            # All faces from all objects
+            face_lists = []
+            for faces in objects.values():
+                face_lists.extend(faces)
+        
+        # Collect only the vertices used by the selected faces and re-index
+        used_indices = set()
+        for face in face_lists:
+            used_indices.update(face)
+        
+        # Build re-index map: old global index -> new compact index
+        sorted_indices = sorted(used_indices)
+        remap = {old: new for new, old in enumerate(sorted_indices)}
+        
+        mesh = Mesh()
+        mesh.vertices = [all_vertices[i] for i in sorted_indices]
+        
+        for face in face_lists:
+            remapped = [remap[i] for i in face]
+            for i in range(1, len(remapped) - 1):
+                triangle = MeshTriangle()
+                triangle.vertex_indices[0] = remapped[0]
+                triangle.vertex_indices[1] = remapped[i]
+                triangle.vertex_indices[2] = remapped[i + 1]
+                mesh.triangles.append(triangle)
+        
+        return mesh
+    
+    def list_obj_objects(self, filepath):
+        """List all named objects ('o' lines) in a .obj file."""
+        names = []
+        with open(filepath, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if parts and (parts[0] == 'o' or parts[0] == 'g') and len(parts) > 1:
+                    names.append(parts[1])
+        return names
+    
+    def load_mesh(self, filepath, object_name=None):
+        """Load a mesh file (.stl or .obj) and return Mesh message.
+        
+        For .obj files, if object_name is specified, only that named object
+        is extracted from the file.
+        """
+        ext = os.path.splitext(filepath)[1].lower()
+        if ext == '.stl':
+            return self.load_stl_mesh(filepath)
+        elif ext == '.obj':
+            return self.load_obj_mesh(filepath, object_name=object_name)
+        else:
+            raise ValueError(f'Unsupported mesh format: {ext} (use .stl or .obj)')
+    
+    def resolve_mesh_path(self, mesh_name):
+        """
+        Resolve a mesh name to a full file path.
+        Accepts:
+          - Full absolute path (returned as-is)
+          - Filename with extension (looked up in MESH_DIR)
+          - Name without extension (searches for .stl then .obj in MESH_DIR)
+        """
+        if os.path.isabs(mesh_name) and os.path.isfile(mesh_name):
+            return mesh_name
+        
+        # Try as filename in MESH_DIR
+        candidate = os.path.join(MESH_DIR, mesh_name)
+        if os.path.isfile(candidate):
+            return candidate
+        
+        # Try adding extensions
+        for ext in ['.stl', '.obj']:
+            candidate = os.path.join(MESH_DIR, mesh_name + ext)
+            if os.path.isfile(candidate):
+                return candidate
+        
+        raise FileNotFoundError(
+            f"Mesh '{mesh_name}' not found in {MESH_DIR}. "
+            f"Available: {[f for f in os.listdir(MESH_DIR) if f.endswith(('.stl', '.obj'))]}"
+        )
+    
     def add_mesh_object(self, object_id, mesh_path, frame_id='base_link', 
                        pos=(0.0, 0.0, 0.0), quat=(0.0, 0.0, 0.0, 1.0),
-                       scale=(1.0, 1.0, 1.0)):
+                       scale=(1.0, 1.0, 1.0), obj_name=None):
         """
         Add a mesh collision object to the planning scene.
         
         Args:
             object_id: Unique name for the object
-            mesh_path: Absolute path to STL file
+            mesh_path: Path or name of mesh file (.stl/.obj). Can be absolute path,
+                       filename, or name without extension (resolved from MESH_DIR)
             frame_id: Reference frame
             pos: Position (x, y, z)
             quat: Orientation quaternion (x, y, z, w)
             scale: Scale factors (x, y, z)
+            obj_name: For multi-object .obj files, the name of the object to extract
         """
         # Load and scale mesh
-        mesh = self.load_stl_mesh(mesh_path)
+        resolved_path = self.resolve_mesh_path(mesh_path)
+        mesh = self.load_mesh(resolved_path, object_name=obj_name)
         for vertex in mesh.vertices:
             vertex.x *= scale[0]
             vertex.y *= scale[1]
@@ -107,20 +247,23 @@ class DynamicSceneManager(Node):
     
     def attach_mesh_object(self, object_id, mesh_path, link_name='tool0',
                            pos=(0.0, 0.0, 0.0), quat=(0.0, 0.0, 0.0, 1.0),
-                           scale=(1.0, 1.0, 1.0), touch_links=None):
+                           scale=(1.0, 1.0, 1.0), touch_links=None, obj_name=None):
         """
         Attach a mesh collision object to a robot link so it moves with the robot.
         
         Args:
             object_id: Unique name for the object
-            mesh_path: Absolute path to STL file
+            mesh_path: Path or name of mesh file (.stl/.obj). Can be absolute path,
+                       filename, or name without extension (resolved from MESH_DIR)
             link_name: Robot link to attach to
             pos: Position relative to the link
             quat: Orientation quaternion (x, y, z, w) relative to the link
             scale: Scale factors (x, y, z)
             touch_links: Links allowed to touch the object (no collision checked)
+            obj_name: For multi-object .obj files, the name of the object to extract
         """
-        mesh = self.load_stl_mesh(mesh_path)
+        resolved_path = self.resolve_mesh_path(mesh_path)
+        mesh = self.load_mesh(resolved_path, object_name=obj_name)
         for vertex in mesh.vertices:
             vertex.x *= scale[0]
             vertex.y *= scale[1]
